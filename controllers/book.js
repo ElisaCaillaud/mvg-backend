@@ -1,24 +1,23 @@
-const Book = require("../models/book");
+const Book = require("../models/Book");
 
 exports.createBook = (req, res, next) => {
+  const bookObject = JSON.parse(req.body.book);
+  delete bookObject._id;
+  delete bookObject._userId;
   const book = new Book({
-    title: req.body.title,
-    description: req.body.description,
-    imageUrl: req.body.imageUrl,
-    price: req.body.price,
-    userId: req.body.userId,
+    ...bookObject,
+    userId: req.auth.userId, // On récupère l'ID utilisateur depuis le token
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${
+      req.file.filename
+    }`,
   });
   book
     .save()
     .then(() => {
-      res.status(201).json({
-        message: "Post saved successfully!",
-      });
+      res.status(201).json({ message: "Objet enregistré !" });
     })
     .catch((error) => {
-      res.status(400).json({
-        error: error,
-      });
+      res.status(400).json({ error });
     });
 };
 
@@ -37,15 +36,15 @@ exports.getOneBook = (req, res, next) => {
 };
 
 exports.modifyBook = (req, res, next) => {
-  const book = new Book({
-    _id: req.params.id,
-    title: req.body.title,
-    description: req.body.description,
-    imageUrl: req.body.imageUrl,
-    price: req.body.price,
-    userId: req.body.userId,
-  });
-  Book.updateOne({ _id: req.params.id }, book)
+  Book.findOne({ _id: req.params.id })
+    .then((book) => {
+      book.title = req.body.title;
+      book.description = req.body.description;
+      book.imageUrl = req.body.imageUrl;
+      book.price = req.body.price;
+      book.userId = req.body.userId;
+      return book.save();
+    })
     .then(() => {
       res.status(201).json({
         message: "Book updated successfully!",
