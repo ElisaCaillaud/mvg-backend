@@ -2,6 +2,7 @@ const Book = require("../models/Book");
 const fs = require("fs");
 
 exports.createBook = (req, res, next) => {
+  //res.status(201).json({ body: req.body, file: req.file });
   const bookObject = req.body; // Pas besoin de JSON.parse ici
   const book = new Book({
     ...bookObject,
