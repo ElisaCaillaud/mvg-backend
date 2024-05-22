@@ -1,6 +1,5 @@
 const Book = require("../models/Book");
-
-const Book = require("../models/Book");
+const fs = require("fs");
 
 exports.createBook = (req, res, next) => {
   const bookObject = req.body; // Pas besoin de JSON.parse ici
@@ -46,9 +45,9 @@ exports.modifyBook = (req, res, next) => {
     : { ...req.body };
 
   delete bookObject._userId; // Securite : Supprimez l'identifiant de l'utilisateur du corps de la demande
-  Book.findOne({ _id: req.params.id }) // Verifiez que l'utilisateur est bien l'auteur du livre
+  Book.findOne({ _id: req.params.id }) // Verifiez que l'utilisateur est bien l'auteur du livre qu'il supprime
     .then((book) => {
-      if (book.userId != req.auth.userId) {
+      if (book.userId.toString() !== req.auth.userId.toString()) {
         res.status(401).json({ message: "Not authorized" });
       } else {
         Book.updateOne(
@@ -65,16 +64,24 @@ exports.modifyBook = (req, res, next) => {
 };
 
 exports.deleteBook = (req, res, next) => {
-  Book.deleteOne({ _id: req.params.id })
-    .then(() => {
-      res.status(200).json({
-        message: "Deleted!",
-      });
+  Book.findOne({ _id: req.params.id }) // Verifiez que l'utilisateur est bien l'auteur du livre qu'il supprime
+    .then((book) => {
+      if (book.userId != req.auth.userId) {
+        res.status(401).json({ message: "Not authorized" });
+      } else {
+        const filename = book.imageUrl.split("/images/")[1];
+        fs.unlink(`images/${filename}`, () => {
+          // Supprimez l'image du serveur
+          Book.deleteOne({ _id: req.params.id })
+            .then(() => {
+              res.status(200).json({ message: "Objet supprimé !" });
+            })
+            .catch((error) => res.status(401).json({ error }));
+        });
+      }
     })
     .catch((error) => {
-      res.status(400).json({
-        error: error,
-      });
+      res.status(500).json({ error });
     });
 };
 
