@@ -2,22 +2,27 @@ const Book = require("../models/Book");
 const fs = require("fs");
 
 exports.createBook = (req, res, next) => {
-  //res.status(201).json({ body: req.body, file: req.file });
-  const bookObject = req.body; // Pas besoin de JSON.parse ici
+  console.log("req.body:", req.body);
+  console.log("req.file:", req.file);
+  console.log("req.auth:", req.auth);
+
+  const bookObject = JSON.parse(req.body.book);
+
   const book = new Book({
     ...bookObject,
-    userId: req.auth.userId, // Assurez-vous que req.auth est défini par un middleware d'authentification
+    userId: req.auth.userId,
     imageUrl: req.file
       ? `${req.protocol}://${req.get("host")}/images/${req.file.filename}`
-      : "", // Assurez-vous que req.file est défini par un middleware de gestion des fichiers
+      : "",
   });
+
   book
     .save()
     .then(() => {
       res.status(201).json({ message: "Objet enregistré !" });
     })
     .catch((error) => {
-      res.status(400).json({ error: error.message }); // Renvoie le message d'erreur, pas l'objet d'erreur entier
+      res.status(400).json({ error: error.message });
     });
 };
 
