@@ -96,3 +96,37 @@ exports.getAllBook = (req, res, next) => {
       });
     });
 };
+
+exports.rateBook = (req, res, next) => {
+  const { grade } = req.body;
+  const { id } = req.params;
+  const userId = req.auth.userId;
+
+  Book.findOne({ _id: id }) // Verifiez que le livre existe
+    .then((book) => {
+      if (!book) {
+        return res.status(404).json({ message: "Livre non trouve" });
+      }
+      const hasRated = book.ratings.some(
+        // Verifiez que l'utilisateur n'a pas deja note le livre
+        (rating) => rating.userId.toString() === userId
+      );
+      if (hasRated) {
+        return res
+          .status(400)
+          .json({ message: "Vous avez deja note ce livre" });
+      }
+
+      book.ratings.push({ userId, grade }); // Ajoutez la note
+
+      book
+        .save() // Sauvegardez le livre
+        .then((book) => {
+          return res.status(200).json({ message: "Livre note avec succes" }); // Retournez une reponse
+        })
+        .catch((error) => {
+          console.error(error);
+          return res.status(500).json({ error });
+        });
+    });
+};
