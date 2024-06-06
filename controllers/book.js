@@ -107,14 +107,20 @@ exports.rateBook = (req, res, next) => {
       if (!book) {
         return res.status(404).json({ message: "Livre non trouve" });
       }
+
       const hasRated = book.ratings.some(
         // Verifiez que l'utilisateur n'a pas deja note le livre
         (rating) => rating.userId.toString() === userId
       );
-      if (hasRated) {
-        return res
-          .status(400)
-          .json({ message: "Vous avez deja note ce livre" });
+
+      // Verifiez si l'utilisateur est celui qui a cree le livre
+      const isBookCreator = book.userId.toString() === userId;
+
+      if (hasRated && isBookCreator) {
+        return res.status(400).json({
+          message:
+            "Vous ne pouvez pas noter votre propre livre une deuxieme fois",
+        });
       }
 
       book.ratings.push({ userId, grade }); // Ajoutez la note
