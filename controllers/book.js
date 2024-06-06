@@ -46,9 +46,9 @@ exports.modifyBook = (req, res, next) => {
   delete bookObject._id;
   Book.findOne({ _id: req.params.id }).then((book) => {
     if (!book) {
-      res.status(404).json({ message: "Book not found" });
+      res.status(404).json({ message: "Livre non trouve" });
     } else if (!book.userId || book.userId.toString() !== req.auth.userId) {
-      res.status(401).json({ message: "Not authorized" });
+      res.status(401).json({ message: "Non autorise" });
     } else {
       Book.updateOne(
         { _id: req.params.id },
@@ -67,7 +67,7 @@ exports.deleteBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id }) // Verifiez que l'utilisateur est bien l'auteur du livre qu'il supprime
     .then((book) => {
       if (book.userId != req.auth.userId) {
-        res.status(401).json({ message: "Not authorized" });
+        res.status(401).json({ message: "Non autorise" });
       } else {
         const filename = book.imageUrl.split("/images/")[1];
         fs.unlink(`images/${filename}`, () => {
@@ -125,10 +125,24 @@ exports.rateBook = (req, res, next) => {
 
       book.ratings.push({ userId, grade }); // Ajoutez la note
 
+      // Calculez la moyenne des notes
+      const totalGrades = book.ratings.reduce(
+        (total, rating) =>
+          total + (Number.isFinite(rating.grade) ? rating.grade : 0),
+        0
+      );
+      book.averageRating =
+        Number.isFinite(totalGrades) && book.ratings.length > 0
+          ? totalGrades / book.ratings.length
+          : 0;
+
       book
         .save() // Sauvegardez le livre
         .then((book) => {
-          return res.status(200).json({ message: "Livre note avec succes" }); // Retournez une reponse
+          return res.status(200).json({
+            message: "Livre note avec succes",
+            averageRating: book.averageRating,
+          }); // Retournez une reponse
         })
         .catch((error) => {
           console.error(error);
