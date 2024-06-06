@@ -123,25 +123,42 @@ exports.rateBook = (req, res, next) => {
         });
       }
 
-      book.ratings.push({ userId, grade }); // Ajoutez la note
+      // Ajoutez la note
+      const newRatings = [...book.ratings, { userId, grade }];
 
       // Calculez la moyenne des notes
-      const totalGrades = book.ratings.reduce(
+      // Calculez la moyenne des notes
+      const totalGrades = newRatings.reduce(
         (total, rating) =>
           total + (Number.isFinite(rating.grade) ? rating.grade : 0),
         0
       );
-      book.averageRating =
-        Number.isFinite(totalGrades) && book.ratings.length > 0
-          ? totalGrades / book.ratings.length
+      let averageRating =
+        Number.isFinite(totalGrades) && newRatings.length > 0
+          ? totalGrades / newRatings.length
           : 0;
 
-      book
-        .save() // Sauvegardez le livre
+      // Limitez la moyenne à un chiffre après la virgule
+      averageRating = parseFloat(averageRating.toFixed(1));
+
+      // Mettez à jour le livre
+      Book.findOneAndUpdate(
+        { _id: id },
+        {
+          ratings: newRatings,
+          averageRating,
+          title: book.title,
+          author: book.author,
+          imageUrl: book.imageUrl,
+          year: book.year,
+          genre: book.genre,
+        },
+        { new: true } // Cette option fait en sorte que la méthode renvoie le document mis à jour
+      )
         .then((book) => {
           return res.status(200).json({
             message: "Livre note avec succes",
-            averageRating: book.averageRating,
+            book,
           }); // Retournez une reponse
         })
         .catch((error) => {
