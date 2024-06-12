@@ -99,7 +99,7 @@ exports.getAllBook = (req, res, next) => {
 
 exports.rateBook = (req, res, next) => {
   console.log("rateBook");
-  const { rating } = req.body;
+  const grade = req.body.rating;
   const { id } = req.params;
   const userId = req.auth.userId;
 
@@ -117,7 +117,7 @@ exports.rateBook = (req, res, next) => {
       // Verifiez si l'utilisateur est celui qui a cree le livre
       const isBookCreator = book.userId.toString() === userId;
 
-      if (hasRated || isBookCreator) {
+      if (hasRated && isBookCreator) {
         return res.status(400).json({
           message:
             "Vous ne pouvez pas noter votre propre livre une deuxieme fois",
@@ -125,22 +125,15 @@ exports.rateBook = (req, res, next) => {
       }
 
       // Ajoutez la note
-      const newRatings = [...book.ratings, { userId, rating }];
-
-      console.log(JSON.stringify(newRatings));
-
-      console.log("Grades : " + JSON.stringify(req.body));
+      const newRatings = [...book.ratings, { userId, grade }];
 
       // Calculez la moyenne des notes
       const totalGrades = newRatings.reduce(
         (total, rating) =>
-          total + (Number.isFinite(rating.rating) ? rating.rating : 0),
+          total + (Number.isFinite(rating.grade) ? rating.grade : 0),
         0
       );
-      newRatings.reduce((total, rating) =>
-        console.log("rating : " + rating + " total : " + total)
-      );
-      console.log("TotalGrades : " + totalGrades);
+
       let averageRating =
         Number.isFinite(totalGrades) && newRatings.length > 0
           ? totalGrades / newRatings.length
@@ -148,7 +141,6 @@ exports.rateBook = (req, res, next) => {
 
       // Limitez la moyenne à un chiffre après la virgule
       averageRating = parseFloat(averageRating.toFixed(1));
-      console.log("AverageRating : " + averageRating);
 
       // Mettez à jour le livre
       Book.findOneAndUpdate(
