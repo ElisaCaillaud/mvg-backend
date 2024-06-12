@@ -98,12 +98,13 @@ exports.getAllBook = (req, res, next) => {
 };
 
 exports.rateBook = (req, res, next) => {
-  console.log("rateBook");
   const grade = req.body.rating;
-  const { id } = req.params;
+  const paramId = req.params.id;
   const userId = req.auth.userId;
 
-  Book.findOne({ _id: id }) // Verifiez que le livre existe
+  console.log(paramId);
+
+  Book.findOne({ _id: paramId }) // Verifiez que le livre existe
     .then((book) => {
       if (!book) {
         return res.status(404).json({ message: "Livre non trouve" });
@@ -143,24 +144,13 @@ exports.rateBook = (req, res, next) => {
       averageRating = parseFloat(averageRating.toFixed(1));
 
       // Mettez à jour le livre
-      Book.findOneAndUpdate(
-        { _id: id },
-        {
-          ratings: newRatings,
-          averageRating,
-          title: book.title,
-          author: book.author,
-          imageUrl: book.imageUrl,
-          year: book.year,
-          genre: book.genre,
-        },
-        { new: true } // Cette option fait en sorte que la méthode renvoie le document mis à jour
-      )
-        .then((book) => {
-          return res.status(200).json({
-            message: "Livre note avec succes",
-            book,
-          }); // Retournez une reponse
+      book.ratings = newRatings;
+      book.averageRating = averageRating;
+
+      book
+        .save()
+        .then(() => {
+          return res.status(200).json(book); // Retournez une reponse
         })
         .catch((error) => {
           console.error(error);
