@@ -1,21 +1,55 @@
 const multer = require("multer");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
 
 const MIME_TYPES = {
   "image/jpg": "jpg",
   "image/jpeg": "jpg",
   "image/png": "png",
+  "image/webp": "webp",
 };
-//configuration de multer
+
+// Configuration
 const storage = multer.diskStorage({
-  //enregistrement des fichiers
   destination: (req, file, callback) => {
     callback(null, "images");
   },
   filename: (req, file, callback) => {
-    const name = file.originalname.split(" ").join("_"); //nom du fichier sans espace
-    const extension = MIME_TYPES[file.mimetype]; //extension du fichier
-    callback(null, name + Date.now() + "." + extension);
+    const name = file.originalname.replace(/[\s.]+/g, "_");
+    const extension = MIME_TYPES[file.mimetype];
+    callback(null, `${name}${Date.now()}.${extension}`);
   },
 });
 
-module.exports = multer({ storage: storage }).single("image");
+const upload = multer({ storage: storage }).single("image");
+
+const convertImages = (req, res, next) => {
+  if (!req.file) {
+    return next();
+  }
+
+  const filePath = req.file.path;
+  const outputFileName = req.file.filename.replace(
+    /\.(jpg|jpeg|png)$/,
+    ".webp"
+  );
+  const outputFilePath = path.join("images", `resized_${outputFileName}`);
+
+  sharp(filePath)
+    .webp()
+    .toFile(outputFilePath)
+    .then(() => {
+      fs.unlink(filePath, () => {
+        req.file.path = outputFilePath;
+        req.file.filename = outputFileName;
+        next();
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      return next();
+    });
+};
+
+module.exports = { upload, convertImages };
