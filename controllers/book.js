@@ -6,7 +6,7 @@ exports.createBook = (req, res, next) => {
   delete bookObject._id;
   const book = new Book({
     ...bookObject,
-    userId: req.auth.userId, // Ajoutez cette ligne
+    userId: req.auth.userId,
     imageUrl: `${req.protocol}://${req.get("host")}/images/resized_${
       req.file.filename
     }`,
@@ -64,14 +64,13 @@ exports.modifyBook = (req, res, next) => {
 };
 
 exports.deleteBook = (req, res, next) => {
-  Book.findOne({ _id: req.params.id }) // Verifiez que l'utilisateur est bien l'auteur du livre qu'il supprime
+  Book.findOne({ _id: req.params.id })
     .then((book) => {
       if (book.userId != req.auth.userId) {
         res.status(401).json({ message: "Non autorise" });
       } else {
         const filename = book.imageUrl.split("/images/")[1];
         fs.unlink(`images/${filename}`, () => {
-          // Supprimez l'image du serveur
           Book.deleteOne({ _id: req.params.id })
             .then(() => {
               res.status(200).json({ message: "Objet supprimé !" });
@@ -104,57 +103,50 @@ exports.rateBook = (req, res, next) => {
 
   console.log(paramId);
 
-  Book.findOne({ _id: paramId }) // Verifiez que le livre existe
-    .then((book) => {
-      if (!book) {
-        return res.status(404).json({ message: "Livre non trouve" });
-      }
+  Book.findOne({ _id: paramId }).then((book) => {
+    if (!book) {
+      return res.status(404).json({ message: "Livre non trouve" });
+    }
 
-      const hasRated = book.ratings.some(
-        // Verifiez que l'utilisateur n'a pas deja note le livre
-        (rating) => rating.userId.toString() === userId
-      );
+    const hasRated = book.ratings.some(
+      (rating) => rating.userId.toString() === userId
+    );
 
-      // Verifiez si l'utilisateur est celui qui a cree le livre
-      const isBookCreator = book.userId.toString() === userId;
+    const isBookCreator = book.userId.toString() === userId;
 
-      if (hasRated && isBookCreator) {
-        return res.status(400).json({
-          message:
-            "Vous ne pouvez pas noter votre propre livre une deuxieme fois",
-        });
-      }
+    if (hasRated && isBookCreator) {
+      return res.status(400).json({
+        message:
+          "Vous ne pouvez pas noter votre propre livre une deuxieme fois",
+      });
+    }
 
-      // Ajoutez la note
-      const newRatings = [...book.ratings, { userId, grade }];
+    const newRatings = [...book.ratings, { userId, grade }];
 
-      // Calculez la moyenne des notes
-      const totalGrades = newRatings.reduce(
-        (total, rating) =>
-          total + (Number.isFinite(rating.grade) ? rating.grade : 0),
-        0
-      );
+    const totalGrades = newRatings.reduce(
+      (total, rating) =>
+        total + (Number.isFinite(rating.grade) ? rating.grade : 0),
+      0
+    );
 
-      let averageRating =
-        Number.isFinite(totalGrades) && newRatings.length > 0
-          ? totalGrades / newRatings.length
-          : 0;
+    let averageRating =
+      Number.isFinite(totalGrades) && newRatings.length > 0
+        ? totalGrades / newRatings.length
+        : 0;
 
-      // Limitez la moyenne à un chiffre après la virgule
-      averageRating = parseFloat(averageRating.toFixed(1));
+    averageRating = parseFloat(averageRating.toFixed(1));
 
-      // Mettez à jour le livre
-      book.ratings = newRatings;
-      book.averageRating = averageRating;
+    book.ratings = newRatings;
+    book.averageRating = averageRating;
 
-      book
-        .save()
-        .then(() => {
-          return res.status(200).json(book); // Retournez une reponse
-        })
-        .catch((error) => {
-          console.error(error);
-          return res.status(500).json({ error });
-        });
-    });
+    book
+      .save()
+      .then(() => {
+        return res.status(200).json(book);
+      })
+      .catch((error) => {
+        console.error(error);
+        return res.status(500).json({ error });
+      });
+  });
 };

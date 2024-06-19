@@ -10,7 +10,6 @@ const MIME_TYPES = {
   "image/webp": "webp",
 };
 
-// Configuration
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
     callback(null, "images");
@@ -31,7 +30,7 @@ const convertImages = (req, res, next) => {
 
   const filePath = req.file.path;
   const outputFileName = req.file.filename.replace(
-    /\.(jpg|jpeg|png)$/,
+    /\.(jpg|jpeg|png|webp)$/,
     ".webp"
   );
   const outputFilePath = path.join("images", `resized_${outputFileName}`);
