@@ -150,3 +150,16 @@ exports.rateBook = (req, res, next) => {
       });
   });
 };
+
+exports.bestRatings = (req, res, next) => {
+  Book.find()
+    .sort({ averageRating: -1 })
+    .limit(3)
+    .then((books) => {
+      res.status(200).json(books);
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).json({ error });
+    });
+};
